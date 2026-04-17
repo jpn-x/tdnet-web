@@ -509,17 +509,12 @@ window.addEventListener('DOMContentLoaded', () => {
   startClock()
   scheduleSmartRefresh()
 
-  if (!workerUrl || workerUrl.includes('YOUR_WORKER')) {
-    setSbar('⚠ [設定] から Worker URL を設定してください', true)
-    openSettings()
-  } else {
-    fetchData(true)
-  }
+  fetchData(true)
 })
 
 // ─── localStorage 保存・読込 ─────────────────────────────
 function loadState() {
-  workerUrl    = ls('workerUrl')    || ''
+  workerUrl    = ls('workerUrl')    || 'https://tdnet-worker.cadillac600.workers.dev'
   filterReit   = ls('filterReit')  !== 'false'
   allPages     = ls('allPages')    !== 'false'
   intervalSec  = parseInt(ls('intervalSec') || '300')
@@ -587,7 +582,7 @@ function addDays(s, n) {
 
 // ─── データ取得 ───────────────────────────────────────────
 async function fetchData(initial = false) {
-  if (!workerUrl || workerUrl.includes('YOUR_WORKER')) return
+  if (!workerUrl) return
   if (isFetching) return
   isFetching = true
 

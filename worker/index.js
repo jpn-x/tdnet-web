@@ -99,34 +99,30 @@ async function scrape(dateParam, allPages) {
 function parseRows(html, pageUrl) {
   const rows = []
 
-  // テーブル抽出
-  const tblM = html.match(
-    /<table[^>]+id=["'](main-list-table|list-body-box)["'][^>]*>([\s\S]*?)<\/table>/i
-  )
-  if (!tblM) return rows
-
-  const tblHtml = tblM[2]
-  const trRe    = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
+  // テーブルIDを探さず全<tr>を走査（テーブル構造の差異を吸収）
+  const trRe = /<tr[\s>]([\s\S]*?)<\/tr>/gi
   let trM
 
-  while ((trM = trRe.exec(tblHtml)) !== null) {
-    const cells = []
-    const tdRe  = /<td[^>]*>([\s\S]*?)<\/td>/gi
+  while ((trM = trRe.exec(html)) !== null) {
+    const rowHtml = trM[1]
+    const cells   = []
+    const tdRe    = /<td[^>]*>([\s\S]*?)<\/td>/gi
     let tdM
-    while ((tdM = tdRe.exec(trM[1])) !== null) cells.push(tdM[1])
+    while ((tdM = tdRe.exec(rowHtml)) !== null) cells.push(tdM[1])
     if (cells.length < 4) continue
 
     const time = strip(cells[0])
-    if (!time || time.length !== 5 || time[2] !== ':') continue
+    // HH:MM 形式のみ（ヘッダ行などを除外）
+    if (!time || !/^\d{2}:\d{2}$/.test(time)) continue
 
-    const code    = strip(cells[1])
-    const company = decode(strip(cells[2]))
+    const code      = strip(cells[1])
+    const company   = decode(strip(cells[2]))
     const titleCell = cells[3]
-    const title   = decode(strip(titleCell))
+    const title     = decode(strip(titleCell))
     if (!code || !title) continue
 
-    const lm   = titleCell.match(/href="([^"]+)"/)
-    let link   = pageUrl
+    const lm = titleCell.match(/href="([^"]+)"/)
+    let link  = pageUrl
     if (lm) {
       const h = lm[1]
       link = h.startsWith('http') ? h
