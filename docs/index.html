@@ -214,6 +214,11 @@ body.light #dbar-past { background: #fff8e0; }
   font-size: 14px;
   display: none;
 }
+#empty .archive-note {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--new-dot);
+}
 
 /* ─── ステータスバー ──────────────────────────────────── */
 #sbar {
@@ -364,7 +369,12 @@ body.light #dbar-past { background: #fff8e0; }
 
   <!-- リストエリア -->
   <div id="list-wrap">
-    <div id="empty">データなし</div>
+    <div id="empty">
+      <div id="empty-msg">データなし</div>
+      <div class="archive-note" id="archive-note" style="display:none">
+        ⚠ TDnet のアーカイブは約1ヶ月分のみ提供されています。<br>この日付のデータは保存期間を過ぎているため取得できません。
+      </div>
+    </div>
   </div>
 
   <!-- ステータスバー -->
@@ -654,8 +664,12 @@ function render(doFlash = false) {
 
   if (items.length === 0) {
     empty.style.display = 'block'
+    const archiveNote = document.getElementById('archive-note')
+    const diffDays = Math.floor((Date.now() - parseDate(viewDate).getTime()) / 86400000)
+    archiveNote.style.display = (viewDate !== todayStr() && diffDays > 30) ? '' : 'none'
     return
   }
+  document.getElementById('archive-note').style.display = 'none'
   empty.style.display = 'none'
 
   // スクロール位置保存
