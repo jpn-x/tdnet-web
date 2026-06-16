@@ -1,0 +1,65 @@
+name: TDnet 日次データ収集
+
+on:
+  schedule:
+    # 毎週月〜金 18:30 JST (09:30 UTC)
+    - cron: '30 9 * * 1-5'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: '取得日付 (YYYYMMDD)。空欄で今日'
+        required: false
+        default: ''
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 日付を決定
+        id: date
+        run: |
+          if [ -n "${{ github.event.inputs.date }}" ]; then
+            DATE="${{ github.event.inputs.date }}"
+          else
+            DATE=$(TZ=Asia/Tokyo date +%Y%m%d)
+          fi
+          echo "date=$DATE" >> $GITHUB_OUTPUT
+          echo "取得日付: $DATE"
+
+      - name: TDnet データ取得
+        id: fetch
+        run: |
+          DATE="${{ steps.date.outputs.date }}"
+          WORKER_URL="https://tdnet-worker.cadillac600.workers.dev"
+          OUT="docs/data/${DATE}.json"
+
+          echo "取得中: $WORKER_URL?date=$DATE&all=1"
+          HTTP_CODE=$(curl -s -o "$OUT" -w "%{http_code}" \
+            "${WORKER_URL}?date=${DATE}&all=1")
+
+          echo "HTTP: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "取得失敗 (HTTP $HTTP_CODE)"
+            exit 1
+          fi
+
+          ITEMS=$(python3 -c "import json,sys; d=json.load(open('$OUT')); print(len(d.get('items',[])))")
+          echo "items=$ITEMS" >> $GITHUB_OUTPUT
+          echo "取得件数: $ITEMS 件"
+
+      - name: コミット & プッシュ
+        if: steps.fetch.outputs.items != '0'
+        run: |
+          DATE="${{ steps.date.outputs.date }}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "docs/data/${DATE}.json"
+          git diff --cached --quiet || git commit -m "data: ${DATE} (${STEPS_ITEMS}件)"
+          git push
+        env:
+          STEPS_ITEMS: ${{ steps.fetch.outputs.items }}

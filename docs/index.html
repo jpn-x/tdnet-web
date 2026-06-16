@@ -600,14 +600,31 @@ async function fetchData(initial = false) {
   document.getElementById('btn-refresh').classList.add('loading')
 
   try {
-    const params = new URLSearchParams({
-      date: viewDate === todayStr() ? '' : viewDate,
-      all : allPages ? '1' : '0'
-    })
-    const resp = await fetch(`${workerUrl}?${params}`)
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-    const data = await resp.json()
-    if (data.error) throw new Error(data.error)
+    const isToday = viewDate === todayStr()
+    let data
+
+    // 過去日付は保存済みJSONを優先（GitHub Pages配信）
+    if (!isToday) {
+      try {
+        const stored = await fetch(`data/${viewDate}.json`)
+        if (stored.ok) {
+          data = await stored.json()
+          data._source = 'stored'
+        }
+      } catch(_) {}
+    }
+
+    // ストレージになければWorkerから取得
+    if (!data) {
+      const params = new URLSearchParams({
+        date: isToday ? '' : viewDate,
+        all : allPages ? '1' : '0'
+      })
+      const resp = await fetch(`${workerUrl}?${params}`)
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
+      data = await resp.json()
+      if (data.error) throw new Error(data.error)
+    }
 
     // 更新時刻
     const now = new Date()
@@ -635,10 +652,11 @@ async function fetchData(initial = false) {
       const disp    = filteredItems().length
       const newDisp = fresh.filter(it => !isReitEtf(it))
       const pageStr = data.pages > 1 ? '  ' + data.pages + 'P' : ''
+      const srcStr  = data._source === 'stored' ? '  [保存済]' : ''
       if (newDisp.length > 0) {
-        setSbar(`新着 ${newDisp.length}件  計${disp}件${pageStr}`, true)
+        setSbar(`新着 ${newDisp.length}件  計${disp}件${pageStr}${srcStr}`, true)
       } else {
-        setSbar(`${disp}件${pageStr}`, false)
+        setSbar(`${disp}件${pageStr}${srcStr}`, false)
       }
     }
 
