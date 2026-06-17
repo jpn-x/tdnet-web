@@ -38,6 +38,7 @@ jobs:
           WORKER_URL="https://tdnet-worker.cadillac600.workers.dev"
           OUT="docs/data/${DATE}.json"
 
+          mkdir -p docs/data
           echo "取得中: $WORKER_URL?date=$DATE&all=1"
           HTTP_CODE=$(curl -s -o "$OUT" -w "%{http_code}" \
             "${WORKER_URL}?date=${DATE}&all=1")
