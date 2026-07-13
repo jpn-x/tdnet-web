@@ -3,7 +3,7 @@ name: Deploy to Cloudflare
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["TDnet 譌･谺｡繝・・繧ｿ蜿朱寔"]
+    workflows: ["TDnet 日次データ収集"]
     types: [completed]
 
 permissions:
