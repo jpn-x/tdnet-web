@@ -55,13 +55,13 @@ wrangler deploy
 2. Source: 「Deploy from a branch」
 3. Branch: `main` / `docs` フォルダ を選択
 4. 「Save」をクリック
-5. 数分後に `https://tdnet-web.cadillac600.workers.dev/` で公開される
+5. 数分後に `https://tdnet-web.jp-x.workers.dev/` で公開される
 
 ---
 
 ### Step 4: Worker URL を設定
 
-1. ブラウザで `https://tdnet-web.cadillac600.workers.dev/` を開く
+1. ブラウザで `https://tdnet-web.jp-x.workers.dev/` を開く
 2. 「[設定]」をクリック
 3. **Worker URL** 欄に Step 2 でコピーした URL を貼り付け
 4. 「保存」をクリック → 自動でデータ取得開始
