@@ -2,6 +2,8 @@ name: Deploy to Cloudflare
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
   workflow_run:
     workflows: ["TDnet 日次データ収集"]
     types: [completed]
@@ -11,7 +13,7 @@ permissions:
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +28,4 @@ jobs:
             echo "CLOUDFLARE_API_TOKEN not set; skipping Cloudflare deploy."
             exit 0
           fi
-          mkdir -p /tmp/site
-          rsync -a docs/ /tmp/site/ --exclude .git --exclude .github --exclude scripts --exclude '*.py' --exclude requirements.txt --exclude README.md
-          npx wrangler@4 deploy --name=tdnet-web --compatibility-date=2026-07-01 --assets=/tmp/site
+          npx wrangler@4 deploy

@@ -1,0 +1,13 @@
+{
+  // TDnet 開示情報リアルタイム: 画面(docs/)と API(/api/disclosures)を 1 つの Worker で配信する
+  "name": "tdnet-web",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-01",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./docs",
+    "binding": "ASSETS",
+    // /api/* だけ Worker を先に通す。それ以外は静的ファイルをそのまま配信
+    "run_worker_first": ["/api/*"]
+  }
+}

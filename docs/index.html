@@ -273,17 +273,6 @@ body.light #dbar-past { background: #fff8e0; }
 .modal-row label { cursor: pointer; font-size: 13px; line-height: 1.4; }
 .modal-note { color: var(--fg-head); font-size: 11px; margin-left: 20px; margin-top: 2px; margin-bottom: 6px; }
 .worker-row { display: flex; gap: 6px; margin-bottom: 4px; }
-#worker-url-input {
-  flex: 1;
-  background: var(--bg-row-a);
-  border: 1px solid var(--sep);
-  color: var(--fg-dim);
-  font-size: 12px;
-  padding: 4px 6px;
-  font-family: monospace;
-  border-radius: 2px;
-}
-#worker-url-input:focus { outline: 1px solid var(--accent); }
 .modal-btn {
   background: var(--bg-head);
   color: var(--fg-dim);
@@ -397,15 +386,6 @@ body.light #dbar-past { background: #fff8e0; }
     <h2>⚙ 設定</h2>
     <div class="modal-sep"></div>
 
-    <div class="modal-section-lbl">Worker URL（必須）</div>
-    <div class="worker-row">
-      <input type="text" id="worker-url-input" placeholder="https://tdnet-worker.your-name.workers.dev">
-      <button class="modal-btn" onclick="saveWorkerUrl()">保存</button>
-    </div>
-    <div class="modal-note">※ Cloudflare Worker をデプロイして URL を設定してください</div>
-
-    <div class="modal-sep"></div>
-
     <div class="modal-section-lbl">テーマ</div>
     <div class="rb-group" style="margin-bottom:10px">
       <label class="modal-row" style="margin-bottom:0">
@@ -437,12 +417,8 @@ body.light #dbar-past { background: #fff8e0; }
       <h2 style="color:var(--accent);font-size:15px;margin-bottom:8px">📖 使い方ガイド</h2>
       <div class="modal-sep"></div>
 
-      <h3>■ 初回セットアップ（必須）</h3>
-      <h4>▸ Cloudflare Worker URL の設定</h4>
-      <p>このWebツールは Cloudflare Worker 経由でTDnetのデータを取得します。</p>
-      <p>1. Cloudflare アカウントを作成（無料）</p>
-      <p>2. Worker をデプロイ（README.md の手順参照）</p>
-      <p>3. [設定] → Worker URL に Worker の URL を貼り付けて保存</p>
+      <h3>■ 出典</h3>
+      <p>データは東京証券取引所 TDnet（適時開示情報閲覧サービス）の公開ページから取得しています。</p>
 
       <h3>■ 自動更新</h3>
       <h4>▸ 更新間隔プルダウン</h4>
@@ -502,7 +478,7 @@ const FLASH_MS    = 200
 const WEEK_JP     = ['日','月','火','水','木','金','土']
 
 // ─── 状態 ────────────────────────────────────────────────
-let workerUrl    = ''
+const workerUrl  = '/api/disclosures' // 同じURLの API(Worker 1つ構成)
 let allItems     = []
 let seenIds      = new Set()
 let newIds       = new Set()
@@ -533,7 +509,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // ─── localStorage 保存・読込 ─────────────────────────────
 function loadState() {
-  workerUrl    = (ls('workerUrl') || 'https://tdnet-worker.jp-x.workers.dev').replace('.cadillac600.workers.dev', '.jp-x.workers.dev') // 旧URLが端末に保存されていても新URLへ
   filterReit   = ls('filterReit')  !== 'false'
   allPages     = ls('allPages')    !== 'false'
   intervalSec  = parseInt(ls('intervalSec') || '300')
@@ -547,7 +522,6 @@ function loadState() {
   seenIds = new Set(seen)
 
   // UI初期値
-  document.getElementById('worker-url-input').value = workerUrl
   document.getElementById('interval').value = String(intervalSec)
   document.getElementById('ck-reit').checked = filterReit
   document.querySelectorAll('input[name=theme]').forEach(r => {
@@ -557,7 +531,6 @@ function loadState() {
 }
 
 function saveState() {
-  setLs('workerUrl',   workerUrl)
   setLs('filterReit',  String(filterReit))
   setLs('allPages',    String(allPages))
   setLs('intervalSec', String(intervalSec))
@@ -612,7 +585,7 @@ async function fetchData(initial = false) {
     const isToday = viewDate === todayStr()
     let data
 
-    // 過去日付は保存済みJSONを優先（GitHub Pages配信）
+    // 過去日付は保存済みJSONを優先（docs/data/ に保存した日次データ）
     if (!isToday) {
       try {
         const stored = await fetch(`data/${viewDate}.json`)
@@ -623,7 +596,7 @@ async function fetchData(initial = false) {
       } catch(_) {}
     }
 
-    // ストレージになければWorkerから取得
+    // 保存データになければ API から取得
     if (!data) {
       const params = new URLSearchParams({
         date: isToday ? '' : viewDate,
@@ -976,7 +949,6 @@ function toggleReitFilter() {
 
 // ─── 設定モーダル ─────────────────────────────────────────
 function openSettings() {
-  document.getElementById('worker-url-input').value = workerUrl
   document.getElementById('modal-overlay').classList.add('open')
 }
 
@@ -987,15 +959,6 @@ function closeModal(e) {
 
 function closeModalDirect() {
   document.getElementById('modal-overlay').classList.remove('open')
-}
-
-function saveWorkerUrl() {
-  const val = document.getElementById('worker-url-input').value.trim()
-  if (!val) return
-  workerUrl = val.replace(/\/$/, '')
-  saveState()
-  closeModalDirect()
-  fetchData(true)
 }
 
 // ─── 使い方モーダル ───────────────────────────────────────

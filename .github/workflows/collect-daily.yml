@@ -35,7 +35,7 @@ jobs:
         id: fetch
         run: |
           DATE="${{ steps.date.outputs.date }}"
-          WORKER_URL="https://tdnet-worker.jp-x.workers.dev"
+          WORKER_URL="https://tdnet-web.jp-x.workers.dev/api/disclosures"
           OUT="docs/data/${DATE}.json"
 
           mkdir -p docs/data
