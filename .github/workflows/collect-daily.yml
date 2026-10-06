@@ -2,12 +2,13 @@ name: TDnet 日次データ収集
 
 on:
   schedule:
-    # 毎週月〜金 18:30 JST (09:30 UTC)
+    # 毎週月〜金 18:30 JST (09:30 UTC)。GitHub 側の都合で数時間遅れることがあるため、
+    # 遅れても取りこぼさないよう「直近の欠けている平日」をまとめて取り直す。
     - cron: '30 9 * * 1-5'
   workflow_dispatch:
     inputs:
       date:
-        description: '取得日付 (YYYYMMDD)。空欄で今日'
+        description: '取得日付 (YYYYMMDD)。空欄で直近14日の欠けている平日を取得'
         required: false
         default: ''
 
@@ -20,47 +21,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 日付を決定
-        id: date
-        run: |
-          if [ -n "${{ github.event.inputs.date }}" ]; then
-            DATE="${{ github.event.inputs.date }}"
-          else
-            DATE=$(TZ=Asia/Tokyo date +%Y%m%d)
-          fi
-          echo "date=$DATE" >> $GITHUB_OUTPUT
-          echo "取得日付: $DATE"
-
-      - name: TDnet データ取得
+      - name: TDnet データ取得(欠けている日の埋め戻し込み)
         id: fetch
+        env:
+          INPUT_DATE: ${{ github.event.inputs.date }}
+          API: https://tdnet-web.jp-x.workers.dev/api/disclosures
         run: |
-          DATE="${{ steps.date.outputs.date }}"
-          WORKER_URL="https://tdnet-web.jp-x.workers.dev/api/disclosures"
-          OUT="docs/data/${DATE}.json"
-
           mkdir -p docs/data
-          echo "取得中: $WORKER_URL?date=$DATE&all=1"
-          HTTP_CODE=$(curl -s -o "$OUT" -w "%{http_code}" \
-            "${WORKER_URL}?date=${DATE}&all=1")
-
-          echo "HTTP: $HTTP_CODE"
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "取得失敗 (HTTP $HTTP_CODE)"
-            exit 1
+          if [ -n "$INPUT_DATE" ]; then
+            DATES="$INPUT_DATE"
+          else
+            DATES=""
+            for i in $(seq 0 13); do
+              d=$(TZ=Asia/Tokyo date -d "$i days ago" +%Y%m%d)
+              dow=$(TZ=Asia/Tokyo date -d "$i days ago" +%u)
+              [ "$dow" -ge 6 ] && continue            # 土日は開示なし
+              # 今日・昨日は常に取り直す。それ以前は、保存済みならスキップ
+              if [ "$i" -le 1 ] || [ ! -s "docs/data/$d.json" ]; then DATES="$DATES $d"; fi
+            done
           fi
+          echo "対象日:$DATES"
 
-          ITEMS=$(python3 -c "import json,sys; d=json.load(open('$OUT')); print(len(d.get('items',[])))")
-          echo "items=$ITEMS" >> $GITHUB_OUTPUT
-          echo "取得件数: $ITEMS 件"
+          SAVED=0
+          for DATE in $DATES; do
+            TMP=$(mktemp)
+            CODE=$(curl -s -o "$TMP" -w "%{http_code}" "${API}?date=${DATE}&all=1")
+            if [ "$CODE" != "200" ]; then echo "$DATE: 取得失敗 (HTTP $CODE)"; rm -f "$TMP"; continue; fi
+            N=$(python3 -c "import json; print(len(json.load(open('$TMP')).get('items',[])))")
+            if [ "$N" = "0" ]; then echo "$DATE: 0件(祝日・未公開)のため保存しない"; rm -f "$TMP"; continue; fi
+            mv "$TMP" "docs/data/${DATE}.json"
+            echo "$DATE: ${N}件を保存"
+            SAVED=$((SAVED+1))
+          done
+          echo "saved=$SAVED" >> $GITHUB_OUTPUT
+          # 手動で日付を指定したのに保存できなかった場合は失敗にする
+          if [ -n "$INPUT_DATE" ] && [ "$SAVED" = "0" ]; then echo "指定日を保存できませんでした"; exit 1; fi
 
       - name: コミット & プッシュ
-        if: steps.fetch.outputs.items != '0'
         run: |
-          DATE="${{ steps.date.outputs.date }}"
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "docs/data/${DATE}.json"
-          git diff --cached --quiet || git commit -m "data: ${DATE} (${STEPS_ITEMS}件)"
+          git add docs/data
+          git diff --cached --quiet && { echo "変更なし"; exit 0; }
+          git commit -m "data: 日次データ更新 (${{ steps.fetch.outputs.saved }}日分)"
           git push
-        env:
-          STEPS_ITEMS: ${{ steps.fetch.outputs.items }}
