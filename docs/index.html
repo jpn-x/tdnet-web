@@ -84,10 +84,11 @@ html, body {
   min-height: 30px;
 }
 #title {
+  display: inline;
+  margin: 0 8px 0 0;
   color: var(--accent);
   font-weight: bold;
   font-size: 13px;
-  margin-right: 8px;
   white-space: nowrap;
 }
 .hitem {
@@ -311,13 +312,13 @@ body.light #dbar-past { background: #fff8e0; }
 
   <!-- ヘッダーバー -->
   <div id="hbar">
-    <span id="title">▪ TDnet 開示情報リアルタイム</span>
+    <h1 id="title">▪ TDnet 開示情報リアルタイム</h1>
     <span class="hitem">最終更新:</span>
     <span class="hitem" id="last-upd">--:--</span>
     <span class="hbtn" id="btn-refresh" onclick="manualRefresh()">　[↻ 手動更新する]</span>
     <span class="hitem" id="countdown">　次回--:--</span>
     <span class="hitem">&nbsp;[</span>
-    <select id="interval" onchange="onIntervalChange()">
+    <select id="interval" aria-label="自動更新の間隔" onchange="onIntervalChange()">
       <option value="1">1秒</option>
       <option value="3">3秒</option>
       <option value="10">10秒</option>
@@ -347,7 +348,7 @@ body.light #dbar-past { background: #fff8e0; }
     <span class="dsep">│</span>
     <span class="dbtn" onclick="navigateDate(-1)">◀</span>
     <span id="date-lbl" onclick="openDatePicker()"></span>
-    <input type="date" id="date-picker" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0" onchange="onDatePick()">
+    <input type="date" id="date-picker" aria-label="表示する日付" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0" onchange="onDatePick()">
     <span class="dbtn" onclick="navigateDate(1)">▶</span>
     <span class="dbtn" id="btn-today" style="display:none" onclick="goToday()">　[今日に戻る]</span>
     <span class="dbtn accent" id="btn-allpages" onclick="toggleAllPages()"></span>
